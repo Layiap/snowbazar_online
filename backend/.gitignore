@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.env
+.env.*
+
+# SQLite-Datenbankdateien
+*.db
+*.sqlite3
+
+# Logs & misc
+*.log
+*.bak
+*.swp
+
+# VS Code / Editor files
+.vscode/
+*.code-workspace
+
+# MacOS / Windows Systemfiles
+.DS_Store
+Thumbs.db
+
+# Migrations (optional, wenn du welche erzeugst)
+migrations/
