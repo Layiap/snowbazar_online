@@ -1,9 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import logo from "./assets/Snowteam_Logo_2016.png";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+
 function App() {
+  const navigate = useNavigate();
+  const { uuid } = useParams();
+  const imBearbeitungsmodus = !!uuid;
+
+  const [artikel, setArtikel] = useState([]);
+  const [einwilligung, setEinwilligung] = useState(false);
+  const [einwilligungFehler, setEinwilligungFehler] = useState(false);
+
   const [kunde, setKunde] = useState({
     name: "",
     telefon: "",
@@ -11,11 +21,6 @@ function App() {
     bemerkung: "",
   });
 
-  const [einwilligung, setEinwilligung] = useState(false);
-  const [einwilligungFehler, setEinwilligungFehler] = useState(false);
-
-
-  const [artikel, setArtikel] = useState([]);
   const [neuerArtikel, setNeuerArtikel] = useState({
     beschreibung: "",
     groesse: "",
@@ -27,7 +32,6 @@ function App() {
     telefon: false,
     email: false,
   });
-
 
   const [artikelFehler, setArtikelFehler] = useState({
     beschreibung: false,
@@ -64,7 +68,6 @@ function App() {
     setArtikelFehler({ beschreibung: false, preis: false });
   };
 
-
   const removeArtikel = (index) => {
     const updated = [...artikel];
     updated.splice(index, 1);
@@ -72,13 +75,11 @@ function App() {
   };
 
   const handleSubmit = async () => {
-
     if (!einwilligung) {
       setEinwilligungFehler(true);
       toast.warning("Bitte der Datenschutzerklärung zustimmen.");
       return;
     }
-
 
     const errors = {
       name: !kunde.name.trim(),
@@ -97,21 +98,43 @@ function App() {
     }
 
     try {
-      const response = await fetch("http://localhost:8000/api/anmeldung", {
-        method: "POST",
+      const methode = imBearbeitungsmodus ? "PUT" : "POST";
+      const url = imBearbeitungsmodus
+        ? `http://localhost:8000/api/anmeldung/${uuid}`
+        : `http://localhost:8000/api/anmeldung`;
+
+      const payload = {
+        ...kunde,
+        artikel,
+        ...(imBearbeitungsmodus ? { uuid } : {}),
+      };
+
+      const response = await fetch(url, {
+        method: methode,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...kunde, artikel }),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
 
+      if (response.status === 422) {
+        const emailFehler = result.detail?.some(
+          (e) => e.loc?.includes("email") && e.type?.includes("value_error")
+        );
+        if (emailFehler) {
+          setKundeFehler((prev) => ({ ...prev, email: true }));
+          toast.error("Bitte eine gültige E-Mail-Adresse eingeben.");
+        } else {
+          toast.error("Ungültige Eingabedaten.");
+        }
+        return;
+      }
+
       if (response.ok) {
-        toast.success("Anmeldung erfolgreich! UUID: " + result.kunde_uuid);
-        setKunde({ name: "", telefon: "", email: "", bemerkung: "" });
-        setArtikel([]);
-        setKundeFehler({ name: false, telefon: false, email: false });
+        toast.success("Daten erfolgreich gespeichert!");
+        navigate(`/bestaetigung/${result.kunde_uuid || uuid}`);
       } else {
-        toast.error("Fehler: " + result.detail);
+        toast.error("Fehler: " + result.detail || "Unbekannter Fehler");
         console.error(result.detail);
       }
     } catch (err) {
@@ -119,6 +142,24 @@ function App() {
       toast.error("Serverfehler beim Speichern");
     }
   };
+
+
+  useEffect(() => {
+    if (imBearbeitungsmodus) {
+      fetch(`http://localhost:8000/api/anmeldung/${uuid}`)
+        .then((res) => res.json())
+        .then((daten) => {
+          setKunde({
+            name: daten.name,
+            telefon: daten.telefon,
+            email: daten.email,
+            bemerkung: daten.bemerkung || "",
+          });
+          setArtikel(daten.artikel || []);
+        })
+        .catch(() => toast.error("Fehler beim Laden der Anmeldung"));
+    }
+  }, [uuid]);
 
 
   return (
@@ -152,9 +193,13 @@ function App() {
             placeholder="Name *"
             value={kunde.name}
             onChange={handleKundeChange}
-            className={`w-full p-2 border rounded ${kundeFehler.name ? "border-red-500" : "border-gray-300"
-              }`}
+            disabled={imBearbeitungsmodus}
+            className={`w-full p-2 border rounded 
+              ${kundeFehler.name ? "border-red-500" : "border-gray-300"} 
+              ${imBearbeitungsmodus ? "bg-gray-100 text-gray-600 cursor-not-allowed" : "bg-white"}
+            `}
           />
+
           {kundeFehler.name && (
             <p className="text-red-500 text-sm mt-1">Name ist erforderlich.</p>
           )}
@@ -163,9 +208,13 @@ function App() {
             placeholder="Telefon *"
             value={kunde.telefon}
             onChange={handleKundeChange}
-            className={`w-full p-2 border rounded ${kundeFehler.telefon ? "border-red-500" : "border-gray-300"
-              }`}
+            disabled={imBearbeitungsmodus}
+            className={`w-full p-2 border rounded 
+              ${kundeFehler.telefon ? "border-red-500" : "border-gray-300"} 
+              ${imBearbeitungsmodus ? "bg-gray-100 text-gray-600 cursor-not-allowed" : "bg-white"}
+            `}
           />
+
           {kundeFehler.telefon && (
             <p className="text-red-500 text-sm mt-1">Telefon ist erforderlich.</p>
           )}
@@ -176,9 +225,13 @@ function App() {
             type="email"
             value={kunde.email}
             onChange={handleKundeChange}
-            className={`w-full p-2 border rounded ${kundeFehler.email ? "border-red-500" : "border-gray-300"
-              }`}
+            disabled={imBearbeitungsmodus}
+            className={`w-full p-2 border rounded 
+              ${kundeFehler.email ? "border-red-500" : "border-gray-300"} 
+              ${imBearbeitungsmodus ? "bg-gray-100 text-gray-600 cursor-not-allowed" : "bg-white"}
+            `}
           />
+
           {kundeFehler.email && (
             <p className="text-red-500 text-sm mt-1">E-Mail ist erforderlich.</p>
           )}
@@ -301,7 +354,7 @@ function App() {
         onClick={handleSubmit}
         className="mt-6 w-full bg-green-600 text-white p-3 rounded text-lg font-semibold"
       >
-        Anmeldung absenden
+        {imBearbeitungsmodus ? "Änderungen speichern" : "Anmeldung absenden"}
       </button>
       <ToastContainer position="top-center" autoClose={3000} hideProgressBar={false} />
     </div>

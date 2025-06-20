@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./backend
+    container_name: snowbazar-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_data:/app/skibazar.db
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: snowbazar-frontend
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
+volumes:
+  backend_data:

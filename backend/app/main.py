@@ -110,7 +110,6 @@ def anmeldung_speichern(anmeldung: AnmeldungCreate, db: Session = Depends(get_db
 
     return {"status": "ok", "kunde_uuid": neuer_kunde.uuid}
 
-
 @app.get("/api/anmeldung/{kunde_uuid}")
 def anmeldung_anzeigen(kunde_uuid: str, db: Session = Depends(get_db)):
     kunde = db.query(Kunde).filter_by(uuid=kunde_uuid).first()
@@ -133,3 +132,31 @@ def anmeldung_anzeigen(kunde_uuid: str, db: Session = Depends(get_db)):
             for art in kunde.artikel
         ]
     }
+
+@app.put("/api/anmeldung/{uuid}")
+def update_anmeldung(uuid: str, data: AnmeldungCreate, db: Session = Depends(get_db)):
+    bestehend = db.query(Kunde).filter(Kunde.uuid == uuid).first()
+    if not bestehend:
+        raise HTTPException(status_code=404, detail="Anmeldung nicht gefunden")
+
+    # Kundendaten aktualisieren
+    bestehend.name = data.name
+    bestehend.telefon = data.telefon
+    bestehend.email = data.email
+    bestehend.bemerkung = data.bemerkung
+
+    # Alle alten Artikel löschen
+    db.query(Artikel).filter(Artikel.kunde_id == bestehend.id).delete()
+
+    # Neue Artikel hinzufügen
+    for artikel in data.artikel:
+        neuer_artikel = Artikel(
+            beschreibung=artikel.beschreibung,
+            groesse=artikel.groesse,
+            preis=artikel.preis,
+            kunde_id=bestehend.id
+        )
+        db.add(neuer_artikel)
+
+    db.commit()
+    return {"status": "updated", "kunde_uuid": uuid}
