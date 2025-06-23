@@ -20,8 +20,8 @@ API_KEY = os.getenv("API_KEY_SKIBAZAR")
 api_key_header = APIKeyHeader(name="Authorization")
 
 def check_api_key(key: str = Depends(api_key_header)):
-    #print(f"Empfangener Key: '{key}'")
-    #print(f"Erwarteter Key:  '{API_KEY}'")
+    print(f"Empfangener Key: '{key}'")
+    print(f"Erwarteter Key:  '{API_KEY}'")
     if key != API_KEY:
         raise HTTPException(status_code=403, detail="Nicht autorisiert")
 
@@ -153,6 +153,10 @@ def anmeldung_speichern(
     db.add(neuer_kunde)
     db.commit()
     db.refresh(neuer_kunde)
+
+    print("📦 Aktive ENV Variablen:")
+    print(f"SMTP_SERVER: {os.getenv('SMTP_SERVER')}")
+    print(f"SMTP_USER: {os.getenv('SMTP_USER')}")
 
     # Hintergrund-Task starten
     link = f"https://bazar.snowteam-tt.de/bearbeiten/{kunde_uuid}"
