@@ -8,6 +8,13 @@ services:
       - skibazar-db:/app/db
     ports:
       - "8001:8000"
+    environment:
+      - API_KEY_SKIBAZAR=${API_KEY_SKIBAZAR}
+      - SMTP_SERVER=${SMTP_SERVER}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - ABSENDER_EMAIL=${ABSENDER_EMAIL}
     restart: unless-stopped
 
   frontend:
