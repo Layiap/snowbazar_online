@@ -72,7 +72,7 @@ function App() {
     toast.success("Artikel hinzugefügt!", { autoClose: 1000 });
 
     //beschreibungRef.current?.focus();
-    
+
   };
 
   const removeArtikel = (index) => {
@@ -98,6 +98,15 @@ function App() {
 
     const hatFehler = Object.values(errors).some(Boolean);
     if (hatFehler || artikel.length === 0) {
+      if (errors.name) {
+        toast.error("Bitte einen Namen eingeben.");
+      }
+      if (errors.telefon) {
+        toast.error("Bitte eine Telefonnummer eingeben.");
+      }
+      if (errors.email) {
+        toast.error("Bitte eine gültige E-Mail-Adresse eingeben.");
+      }
       if (artikel.length === 0) {
         toast.warning("Bitte mindestens einen Artikel hinzufügen.");
       }
