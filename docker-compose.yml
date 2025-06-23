@@ -1,8 +1,8 @@
-version: "3.8"
-
 services:
   backend:
-    build: ./backend
+    build:
+      context: https://github.com/Layiap/snowbazar_online.git#main
+      dockerfile: backend/Dockerfile
     container_name: snowbazar-backend
     ports:
       - "8000:8000"
@@ -11,7 +11,9 @@ services:
     restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    build:
+      context: https://github.com/Layiap/snowbazar_online.git#main
+      dockerfile: frontend/Dockerfile
     container_name: snowbazar-frontend
     ports:
       - "3000:80"
