@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, EmailStr
@@ -7,6 +7,8 @@ import uuid
 import os
 from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
+from .mail import sende_bestaetigungsmail
+
 
 # ---------------- Optional: .env für lokale Entwicklung laden ----------------
 from dotenv import load_dotenv
@@ -118,9 +120,12 @@ def alle_anmeldungen(db: Session = Depends(get_db), _: str = Depends(check_api_k
         } for k in kunden
     ]
 
-
 @app.post("/api/anmeldung")
-def anmeldung_speichern(anmeldung: AnmeldungCreate, db: Session = Depends(get_db)):
+def anmeldung_speichern(
+    anmeldung: AnmeldungCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     kunde_uuid = str(uuid.uuid4())
 
     neuer_kunde = Kunde(
@@ -131,20 +136,37 @@ def anmeldung_speichern(anmeldung: AnmeldungCreate, db: Session = Depends(get_db
         bemerkung=anmeldung.bemerkung
     )
 
+    artikel_liste = []
     for art in anmeldung.artikel:
-        neuer_kunde.artikel.append(
-            Artikel(
-                beschreibung=art.beschreibung,
-                groesse=art.groesse,
-                preis=art.preis
-            )
+        neuer_artikel = Artikel(
+            beschreibung=art.beschreibung,
+            groesse=art.groesse,
+            preis=art.preis
         )
+        neuer_kunde.artikel.append(neuer_artikel)
+        artikel_liste.append({
+            "beschreibung": art.beschreibung,
+            "groesse": art.groesse,
+            "preis": art.preis
+        })
 
     db.add(neuer_kunde)
     db.commit()
     db.refresh(neuer_kunde)
 
+    # Hintergrund-Task starten
+    link = f"https://bazar.snowteam-tt.de/bearbeiten/{kunde_uuid}"
+    background_tasks.add_task(
+        sende_bestaetigungsmail,
+        anmeldung.email,
+        artikel_liste,
+        link,
+        anmeldung.name,
+        kunde_uuid
+    )
+
     return {"status": "ok", "kunde_uuid": neuer_kunde.uuid}
+
 
 @app.get("/api/anmeldung/{kunde_uuid}")
 def anmeldung_anzeigen(kunde_uuid: str, db: Session = Depends(get_db)):

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import logo from "./assets/Snowteam_Logo_2016.png";
 import { ToastContainer, toast } from "react-toastify";
@@ -8,11 +8,12 @@ import "react-toastify/dist/ReactToastify.css";
 function App() {
   const navigate = useNavigate();
   const { uuid } = useParams();
-  const imBearbeitungsmodus = !!uuid;
 
   const [artikel, setArtikel] = useState([]);
   const [einwilligung, setEinwilligung] = useState(false);
   const [einwilligungFehler, setEinwilligungFehler] = useState(false);
+  const beschreibungRef = useRef(null);
+  const [imBearbeitungsmodus, setImBearbeitungsmodus] = useState(false);
 
   const [kunde, setKunde] = useState({
     name: "",
@@ -66,6 +67,8 @@ function App() {
     setArtikel([...artikel, neuerArtikel]);
     setNeuerArtikel({ beschreibung: "", groesse: "", preis: "" });
     setArtikelFehler({ beschreibung: false, preis: false });
+
+    beschreibungRef.current?.focus();
   };
 
   const removeArtikel = (index) => {
@@ -143,24 +146,33 @@ function App() {
     }
   };
 
-
   useEffect(() => {
-    if (imBearbeitungsmodus) {
-      fetch(`${import.meta.env.VITE_API_URL}/api/anmeldung/${uuid}`)
-        .then((res) => res.json())
-        .then((daten) => {
-          setKunde({
-            name: daten.name,
-            telefon: daten.telefon,
-            email: daten.email,
-            bemerkung: daten.bemerkung || "",
-          });
-          setArtikel(daten.artikel || []);
-        })
-        .catch(() => toast.error("Fehler beim Laden der Anmeldung"));
-    }
-  }, [uuid]);
+    if (!uuid) return;
 
+    const fetchDaten = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/anmeldung/${uuid}`);
+        if (!res.ok) {
+          throw new Error("Nicht gefunden");
+        }
+
+        const daten = await res.json();
+        setKunde({
+          name: daten.name,
+          telefon: daten.telefon,
+          email: daten.email,
+          bemerkung: daten.bemerkung || "",
+        });
+        setArtikel(daten.artikel || []);
+        setImBearbeitungsmodus(true);
+      } catch (err) {
+        toast.error("❌ Es konnten keine Daten gefunden werden.");
+        navigate("/"); // oder: navigate("/fehler") wenn du eine Fehlerseite hast
+      }
+    };
+
+    fetchDaten();
+  }, [uuid]);
 
   return (
     <div className="max-w-2xl mx-auto p-4">
@@ -252,6 +264,7 @@ function App() {
           <h2 className="text-xl font-semibold text-sky-700">Artikel hinzufügen</h2>
 
           <input
+            ref={beschreibungRef}
             name="beschreibung"
             placeholder="Artikelbeschreibung *"
             value={neuerArtikel.beschreibung}
@@ -260,6 +273,7 @@ function App() {
             className={`w-full p-2 border rounded ${artikelFehler.beschreibung ? "border-red-500" : "border-gray-300"
               }`}
           />
+
           {artikelFehler.beschreibung && (
             <p className="text-red-500 text-sm mt-1">Beschreibung ist erforderlich.</p>
           )}
@@ -327,7 +341,7 @@ function App() {
       )}
 
       <div className="mt-6">
-        <label className="flex items-start gap-2 text-sm">
+        <label className="flex items-start gap-3 text-base">
           <input
             type="checkbox"
             checked={einwilligung}
@@ -335,9 +349,9 @@ function App() {
               setEinwilligung(e.target.checked);
               setEinwilligungFehler(false);
             }}
-            className="mt-1"
+            className="mt-1 w-5 h-5"
           />
-          <span>
+          <span className="leading-relaxed">
             Ich stimme zu, dass meine Angaben zur Durchführung des Skibazars verarbeitet
             werden dürfen. Die Daten werden nach dem Bazar gelöscht. Eine Weitergabe
             an Dritte erfolgt nicht.
@@ -350,6 +364,8 @@ function App() {
 
 
 
+
+
       <button
         onClick={handleSubmit}
         className="mt-6 w-full bg-green-600 text-white p-3 rounded text-lg font-semibold"
@@ -357,6 +373,26 @@ function App() {
         {imBearbeitungsmodus ? "Änderungen speichern" : "Anmeldung absenden"}
       </button>
       <ToastContainer position="top-center" autoClose={3000} hideProgressBar={false} />
+
+      <footer className="mt-8 text-center text-sm text-gray-400 space-x-4">
+        <a
+          href="https://snowteam-tt.de/impressum"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+        >
+          Impressum
+        </a>
+        <a
+          href="https://snowteam-tt.de/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+        >
+          Datenschutz
+        </a>
+      </footer>
+
     </div>
   );
 }

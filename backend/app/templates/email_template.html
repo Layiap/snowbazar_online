@@ -1,0 +1,37 @@
+<html>
+  <body style="font-family: sans-serif; color: #333; line-height: 1.5;">
+    <p>Hallo {{ name }},</p>
+
+    <p>vielen Dank für die Vorabanmeldung deiner Skibazar-Artikel!<br>
+    Das hilft uns dabei, die Annahme vor Ort beschleunigt abzuwickeln.</p>
+
+    <p><strong>Zeige dafür den QR-Code unseren Leuten bei der Warenannahme:</strong></p>
+    <p><img src="cid:qrcode" alt="QR Code"></p>
+
+    <p>Du hast folgende Artikel angegeben:</p>
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse;">
+      <tr>
+        <th>Beschreibung</th>
+        <th>Größe</th>
+        <th>Preis (€)</th>
+      </tr>
+      {% for art in artikel %}
+      <tr>
+        <td>{{ art.beschreibung }}</td>
+        <td>{{ art.groesse }}</td>
+        <td>{{ "%.2f"|format(art.preis) }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <p>Du kannst deine Artikelliste auch nochmals bearbeiten unter:<br>
+    <a href="{{ link }}">{{ link }}</a></p>
+
+    <p>Alle weiteren Infos findest du hier:<br>
+    <a href="https://ssctettnang.wordpress.com/wintersport/aktuelles-skiabteilung/ski-und-sportbazar/">
+      Ski- und Sportbazar SSC Tettnang
+    </a></p>
+
+    <p>Viele Grüße,<br>Dein Snowteam Tettnang</p>
+  </body>
+</html>
