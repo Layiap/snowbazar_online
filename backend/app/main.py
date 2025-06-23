@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
 from .mail import sende_bestaetigungsmail
 
-
+print("🔁 SKIBAZAR BACKEND STARTET MIT NEUEM CODE")
 # ---------------- Optional: .env für lokale Entwicklung laden ----------------
 from dotenv import load_dotenv
 load_dotenv()
