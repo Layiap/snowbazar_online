@@ -38,7 +38,7 @@ app.add_middleware(
 
 # ---------------- Datenbank Setup ----------------
 
-DATABASE_URL = "sqlite:///./voranmeldung.db"
+DATABASE_URL = "sqlite:///./db/voranmeldung.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False)

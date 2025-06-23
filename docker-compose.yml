@@ -5,7 +5,7 @@ services:
       dockerfile: backend/Dockerfile
     container_name: snowbazar-backend
     volumes:
-      - skibazar-db:/app/voranmeldung.db
+      - skibazar-db:/app/db
     ports:
       - "8001:8000"
     restart: unless-stopped
