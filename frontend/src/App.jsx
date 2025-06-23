@@ -176,15 +176,16 @@ function App() {
 
   return (
     <div className="max-w-2xl mx-auto p-4">
-      <header className="flex items-center gap-4 mb-8 border-b pb-4">
-        <img src={logo} alt="Logo" className="h-16" />
+      <header className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8 border-b pb-4 text-center sm:text-left">
+        <img src={logo} alt="Logo" className="h-16 mx-auto sm:mx-0" />
         <div>
-          <h1 className="text-3xl font-extrabold text-sky-800">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-sky-800">
             Artikel Voranmeldung
           </h1>
           <p className="text-gray-600 text-sm">Snowteam Tettnang</p>
         </div>
       </header>
+
 
       <section className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h2 className="text-lg font-semibold text-blue-800 mb-2">So funktioniert die Voranmeldung</h2>
