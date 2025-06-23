@@ -68,10 +68,11 @@ function App() {
     setNeuerArtikel({ beschreibung: "", groesse: "", preis: "" });
     setArtikelFehler({ beschreibung: false, preis: false });
 
-    // 🎉 Zeige Bestätigungs-Toast für 1 Sekunde
-    toast.success("Artikel hinzugefügt!", { autoClose: 1000 });
-
     beschreibungRef.current?.focus();
+
+    setTimeout(() => {
+      toast.success("Artikel hinzugefügt!", { autoClose: 1000 });
+    }, 100); // 100–200ms Delay reicht meist
   };
 
   const removeArtikel = (index) => {
