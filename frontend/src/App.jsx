@@ -68,10 +68,10 @@ function App() {
     setNeuerArtikel({ beschreibung: "", groesse: "", preis: "" });
     setArtikelFehler({ beschreibung: false, preis: false });
 
-    beschreibungRef.current?.focus();
-
     // 🎉 Zeige Bestätigungs-Toast für 1 Sekunde
     toast.success("Artikel hinzugefügt!", { autoClose: 1000 });
+
+    beschreibungRef.current?.focus();
   };
 
   const removeArtikel = (index) => {
