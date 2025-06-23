@@ -7,7 +7,7 @@ services:
     ports:
       - "8001:8000"
     volumes:
-      - backend_data:/app/skibazar.db
+      - backend_data:/app/voranmeldung.db
     restart: unless-stopped
 
   frontend:
