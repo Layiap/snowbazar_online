@@ -9,7 +9,7 @@ function Bestätigung() {
     const [daten, setDaten] = useState(null);
 
     useEffect(() => {
-        fetch(`http://localhost:8000/api/anmeldung/${uuid}`)
+        fetch(`${import.meta.env.VITE_API_URL}/api/anmeldung/${uuid}`)
             .then((res) => res.json())
             .then(setDaten)
             .catch((err) => console.error(err));

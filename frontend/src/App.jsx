@@ -100,8 +100,8 @@ function App() {
     try {
       const methode = imBearbeitungsmodus ? "PUT" : "POST";
       const url = imBearbeitungsmodus
-        ? `http://localhost:8000/api/anmeldung/${uuid}`
-        : `http://localhost:8000/api/anmeldung`;
+        ? `${import.meta.env.VITE_API_URL}/api/anmeldung/${uuid}`
+        : `${import.meta.env.VITE_API_URL}/api/anmeldung`;
 
       const payload = {
         ...kunde,
@@ -146,7 +146,7 @@ function App() {
 
   useEffect(() => {
     if (imBearbeitungsmodus) {
-      fetch(`http://localhost:8000/api/anmeldung/${uuid}`)
+      fetch(`${import.meta.env.VITE_API_URL}/api/anmeldung/${uuid}`)
         .then((res) => res.json())
         .then((daten) => {
           setKunde({
