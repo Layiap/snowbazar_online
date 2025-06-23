@@ -2,12 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Requirements installieren
+# requirements.txt installieren
 COPY backend/requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# RICHTIG: App-Code aus Projekt-Root kopieren
+# App-Code korrekt kopieren
 COPY backend/app /app/backend/app
 
 EXPOSE 8000
