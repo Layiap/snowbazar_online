@@ -24,6 +24,10 @@ env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)))
 
 
 def sende_bestaetigungsmail(empfaenger: str, artikel: list, link: str, name: str, uuid: str):
+    print("🚀 Mailversand gestartet")
+    print(f"📧 Ziel: {empfaenger} – UUID: {uuid}")
+    print(f"SMTP Server: {SMTP_SERVER}, User: {SMTP_USER}")
+
     # 🧾 QR-Code für UUID erzeugen
     qr = qrcode.QRCode(
         version=5,
