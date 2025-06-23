@@ -4,6 +4,8 @@ services:
       context: https://github.com/Layiap/snowbazar_online.git#main
       dockerfile: backend/Dockerfile
     container_name: snowbazar-backend
+    volumes:
+      - skibazar-db:/app/voranmeldung.db
     ports:
       - "8001:8000"
     restart: unless-stopped
@@ -16,3 +18,5 @@ services:
     ports:
       - "3000:80"
     restart: unless-stopped
+volumes:
+  skibazar-db:
