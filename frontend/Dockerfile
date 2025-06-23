@@ -22,6 +22,10 @@ FROM nginx:alpine
 # Kopiere das gebaute Frontend in das NGINX-HTML-Verzeichnis
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Kopiere eigene nginx.conf
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+
+
 # Optional: eigene nginx.conf hier einfügen, wenn vorhanden
 # COPY nginx.conf /etc/nginx/nginx.conf
 

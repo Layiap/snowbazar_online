@@ -160,7 +160,8 @@ def anmeldung_speichern(
 
     # Hintergrund-Task starten
     link = f"https://bazar.snowteam-tt.de/bearbeiten/{kunde_uuid}"
-    sende_bestaetigungsmail(
+    background_tasks.add_task(
+        sende_bestaetigungsmail,
         anmeldung.email,
         artikel_liste,
         link,
