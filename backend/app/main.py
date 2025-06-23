@@ -1,10 +1,27 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, EmailStr
 from typing import List
 import uuid
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey
+import os
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
+
+# ---------------- Optional: .env für lokale Entwicklung laden ----------------
+from dotenv import load_dotenv
+load_dotenv()
+
+# ---------------- API-Key Absicherung ----------------
+
+API_KEY = os.getenv("API_KEY_SKIBAZAR")
+api_key_header = APIKeyHeader(name="Authorization")
+
+def check_api_key(key: str = Depends(api_key_header)):
+    #print(f"Empfangener Key: '{key}'")
+    #print(f"Erwarteter Key:  '{API_KEY}'")
+    if key != API_KEY:
+        raise HTTPException(status_code=403, detail="Nicht autorisiert")
 
 # ---------------- FastAPI Setup ----------------
 
@@ -12,7 +29,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # für Frontend-Zugriff
+    allow_origins=["*"],  # Für Frontend-Zugriff
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -66,7 +83,6 @@ class AnmeldungCreate(BaseModel):
     bemerkung: str = ""
     artikel: List[ArtikelCreate]
 
-
 # ---------------- DB Initialisierung ----------------
 
 Base.metadata.create_all(bind=engine)
@@ -80,8 +96,28 @@ def get_db():
     finally:
         db.close()
 
-
 # ---------------- API-Endpunkte ----------------
+
+@app.get("/api/anmeldung/all")
+def alle_anmeldungen(db: Session = Depends(get_db), _: str = Depends(check_api_key)):
+    kunden = db.query(Kunde).all()
+    return [
+        {
+            "uuid": k.uuid,
+            "name": k.name,
+            "telefon": k.telefon,
+            "email": k.email,
+            "bemerkung": k.bemerkung,
+            "artikel": [
+                {
+                    "beschreibung": art.beschreibung,
+                    "groesse": art.groesse,
+                    "preis": art.preis
+                } for art in k.artikel
+            ]
+        } for k in kunden
+    ]
+
 
 @app.post("/api/anmeldung")
 def anmeldung_speichern(anmeldung: AnmeldungCreate, db: Session = Depends(get_db)):
@@ -139,16 +175,13 @@ def update_anmeldung(uuid: str, data: AnmeldungCreate, db: Session = Depends(get
     if not bestehend:
         raise HTTPException(status_code=404, detail="Anmeldung nicht gefunden")
 
-    # Kundendaten aktualisieren
     bestehend.name = data.name
     bestehend.telefon = data.telefon
     bestehend.email = data.email
     bestehend.bemerkung = data.bemerkung
 
-    # Alle alten Artikel löschen
     db.query(Artikel).filter(Artikel.kunde_id == bestehend.id).delete()
 
-    # Neue Artikel hinzufügen
     for artikel in data.artikel:
         neuer_artikel = Artikel(
             beschreibung=artikel.beschreibung,
