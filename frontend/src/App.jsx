@@ -69,6 +69,9 @@ function App() {
     setArtikelFehler({ beschreibung: false, preis: false });
 
     beschreibungRef.current?.focus();
+
+    // 🎉 Zeige Bestätigungs-Toast für 1 Sekunde
+    toast.success("Artikel hinzugefügt!", { autoClose: 1000 });
   };
 
   const removeArtikel = (index) => {
@@ -259,6 +262,33 @@ function App() {
         </div>
       </section>
 
+      {artikel.length > 0 && (
+        <section className="mt-6">
+          <h2 className="text-xl font-semibold text-sky-700 mb-2">
+            📦 Hinzugefügte Artikel
+          </h2>
+          <ul className="space-y-2">
+            {artikel.map((a, i) => (
+              <li
+                key={i}
+                className="border rounded p-3 flex justify-between items-start bg-gray-50"
+              >
+                <div>
+                  <p className="font-semibold">{a.beschreibung}</p>
+                  {a.groesse && <p className="text-sm text-gray-600">Größe: {a.groesse}</p>}
+                  <p className="text-sm font-medium text-green-700">Preis: {a.preis} €</p>
+                </div>
+                <button
+                  onClick={() => removeArtikel(i)}
+                  className="text-red-500 text-sm hover:underline"
+                >
+                  Löschen
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mt-6">
         <div className="bg-white shadow-md rounded-lg p-6 space-y-4 border border-gray-200">
@@ -311,35 +341,6 @@ function App() {
           </button>
         </div>
       </section>
-
-
-      {artikel.length > 0 && (
-        <section className="mt-6">
-          <h2 className="text-xl font-semibold text-sky-700 mb-2">
-            📦 Hinzugefügte Artikel
-          </h2>
-          <ul className="space-y-2">
-            {artikel.map((a, i) => (
-              <li
-                key={i}
-                className="border rounded p-3 flex justify-between items-start bg-gray-50"
-              >
-                <div>
-                  <p className="font-semibold">{a.beschreibung}</p>
-                  {a.groesse && <p className="text-sm text-gray-600">Größe: {a.groesse}</p>}
-                  <p className="text-sm font-medium text-green-700">Preis: {a.preis} €</p>
-                </div>
-                <button
-                  onClick={() => removeArtikel(i)}
-                  className="text-red-500 text-sm hover:underline"
-                >
-                  Löschen
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       <div className="mt-6">
         <label className="flex items-start gap-3 text-base">
