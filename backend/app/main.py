@@ -5,7 +5,8 @@ from pydantic import BaseModel, EmailStr
 from typing import List
 import uuid
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
+from datetime import datetime
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, text
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
 from .mail import sende_bestaetigungsmail
 
@@ -17,6 +18,7 @@ load_dotenv()
 # ---------------- API-Key Absicherung ----------------
 
 API_KEY = os.getenv("API_KEY_SKIBAZAR")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 api_key_header = APIKeyHeader(name="Authorization")
 
 def check_api_key(key: str = Depends(api_key_header)):
@@ -55,8 +57,10 @@ class Kunde(Base):
     telefon = Column(String)
     email = Column(String)
     bemerkung = Column(String)
+    saison_id = Column(Integer, ForeignKey("saisons.id"), nullable=True)
 
     artikel = relationship("Artikel", back_populates="kunde", cascade="all, delete")
+    saison = relationship("Saison", back_populates="kunden")
 
 
 class Artikel(Base):
@@ -69,6 +73,26 @@ class Artikel(Base):
     kunde_id = Column(Integer, ForeignKey("kunden.id"), nullable=False)
 
     kunde = relationship("Kunde", back_populates="artikel")
+
+
+class Saison(Base):
+    __tablename__ = "saisons"
+
+    id   = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+
+    kunden = relationship("Kunde", back_populates="saison")
+
+
+class LogEintrag(Base):
+    __tablename__ = "log_eintraege"
+
+    id             = Column(Integer, primary_key=True, index=True)
+    zeitstempel    = Column(String, nullable=False)
+    ereignis       = Column(String, nullable=False)
+    kunde_name     = Column(String)
+    kunde_uuid     = Column(String)
+    artikel_anzahl = Column(Integer, nullable=True)
 
 
 # ---------------- Pydantic-Schemas ----------------
@@ -85,9 +109,24 @@ class AnmeldungCreate(BaseModel):
     bemerkung: str = ""
     artikel: List[ArtikelCreate]
 
+class AdminLoginRequest(BaseModel):
+    password: str
+
+class SaisonCreate(BaseModel):
+    name: str
+
 # ---------------- DB Initialisierung ----------------
 
-Base.metadata.create_all(bind=engine)
+def run_migrations():
+    Base.metadata.create_all(bind=engine)
+    with engine.connect() as conn:
+        result = conn.execute(text("PRAGMA table_info(kunden)"))
+        columns = [row[1] for row in result]
+        if "saison_id" not in columns:
+            conn.execute(text("ALTER TABLE kunden ADD COLUMN saison_id INTEGER REFERENCES saisons(id)"))
+            conn.commit()
+
+run_migrations()
 
 # ---------------- Hilfsfunktion für DB-Session ----------------
 
@@ -98,11 +137,23 @@ def get_db():
     finally:
         db.close()
 
+
+def log_ereignis(db: Session, ereignis: str, kunde_name: str, kunde_uuid: str, artikel_anzahl: int = None):
+    eintrag = LogEintrag(
+        zeitstempel=datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        ereignis=ereignis,
+        kunde_name=kunde_name,
+        kunde_uuid=kunde_uuid,
+        artikel_anzahl=artikel_anzahl,
+    )
+    db.add(eintrag)
+    db.commit()
+
 # ---------------- API-Endpunkte ----------------
 
 @app.get("/api/anmeldung/all")
 def alle_anmeldungen(db: Session = Depends(get_db), _: str = Depends(check_api_key)):
-    kunden = db.query(Kunde).all()
+    kunden = db.query(Kunde).filter(Kunde.saison_id == None).all()
     return [
         {
             "uuid": k.uuid,
@@ -154,6 +205,8 @@ def anmeldung_speichern(
     db.commit()
     db.refresh(neuer_kunde)
 
+    log_ereignis(db, "Neue Anmeldung", anmeldung.name, kunde_uuid, len(anmeldung.artikel))
+
     print("📦 Aktive ENV Variablen:")
     print(f"SMTP_SERVER: {os.getenv('SMTP_SERVER')}")
     print(f"SMTP_USER: {os.getenv('SMTP_USER')}")
@@ -174,10 +227,12 @@ def anmeldung_speichern(
 
 @app.get("/api/anmeldung/{kunde_uuid}")
 def anmeldung_anzeigen(kunde_uuid: str, db: Session = Depends(get_db)):
-    kunde = db.query(Kunde).filter_by(uuid=kunde_uuid).first()
+    kunde = db.query(Kunde).filter(Kunde.uuid == kunde_uuid, Kunde.saison_id == None).first()
 
     if not kunde:
         raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
+
+    log_ereignis(db, "Seite aufgerufen", kunde.name, kunde.uuid)
 
     return {
         "uuid": kunde.uuid,
@@ -197,7 +252,7 @@ def anmeldung_anzeigen(kunde_uuid: str, db: Session = Depends(get_db)):
 
 @app.put("/api/anmeldung/{uuid}")
 def update_anmeldung(uuid: str, data: AnmeldungCreate, db: Session = Depends(get_db)):
-    bestehend = db.query(Kunde).filter(Kunde.uuid == uuid).first()
+    bestehend = db.query(Kunde).filter(Kunde.uuid == uuid, Kunde.saison_id == None).first()
     if not bestehend:
         raise HTTPException(status_code=404, detail="Anmeldung nicht gefunden")
 
@@ -218,4 +273,82 @@ def update_anmeldung(uuid: str, data: AnmeldungCreate, db: Session = Depends(get
         db.add(neuer_artikel)
 
     db.commit()
+    log_ereignis(db, "Bearbeitung gespeichert", bestehend.name, uuid, len(data.artikel))
     return {"status": "updated", "kunde_uuid": uuid}
+
+
+# ---------------- Admin-Endpunkte ----------------
+
+@app.post("/api/admin/login")
+def admin_login(data: AdminLoginRequest):
+    if not ADMIN_PASSWORD or data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=401, detail="Ungültiges Passwort")
+    return {"token": API_KEY}
+
+
+@app.get("/api/admin/saisons")
+def saisons_list(db: Session = Depends(get_db), _: str = Depends(check_api_key)):
+    return [
+        {"id": s.id, "name": s.name, "anzahl": len(s.kunden)}
+        for s in db.query(Saison).all()
+    ]
+
+
+@app.post("/api/admin/archivieren")
+def archivieren(data: SaisonCreate, db: Session = Depends(get_db), _: str = Depends(check_api_key)):
+    if not data.name.strip():
+        raise HTTPException(status_code=400, detail="Saisonname darf nicht leer sein")
+
+    saison = db.query(Saison).filter(Saison.name == data.name.strip()).first()
+    if not saison:
+        saison = Saison(name=data.name.strip())
+        db.add(saison)
+        db.flush()
+
+    aktuelle = db.query(Kunde).filter(Kunde.saison_id == None).all()
+    count = len(aktuelle)
+    for k in aktuelle:
+        k.saison_id = saison.id
+
+    db.commit()
+    return {"status": "archiviert", "saison": saison.name, "anzahl": count}
+
+
+@app.get("/api/admin/log")
+def get_log(db: Session = Depends(get_db), _: str = Depends(check_api_key)):
+    eintraege = db.query(LogEintrag).order_by(LogEintrag.id.desc()).limit(200).all()
+    return [
+        {
+            "zeitstempel": e.zeitstempel,
+            "ereignis": e.ereignis,
+            "kunde_name": e.kunde_name,
+            "kunde_uuid": e.kunde_uuid,
+            "artikel_anzahl": e.artikel_anzahl,
+        }
+        for e in eintraege
+    ]
+
+
+@app.get("/api/admin/saisons/{saison_id}")
+def saison_detail(saison_id: int, db: Session = Depends(get_db), _: str = Depends(check_api_key)):
+    saison = db.query(Saison).filter(Saison.id == saison_id).first()
+    if not saison:
+        raise HTTPException(status_code=404, detail="Saison nicht gefunden")
+    return {
+        "id": saison.id,
+        "name": saison.name,
+        "kunden": [
+            {
+                "uuid": k.uuid,
+                "name": k.name,
+                "telefon": k.telefon,
+                "email": k.email,
+                "bemerkung": k.bemerkung,
+                "artikel": [
+                    {"beschreibung": a.beschreibung, "groesse": a.groesse, "preis": a.preis}
+                    for a in k.artikel
+                ]
+            }
+            for k in saison.kunden
+        ]
+    }
